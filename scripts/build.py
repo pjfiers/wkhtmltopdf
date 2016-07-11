@@ -261,7 +261,8 @@ DEPENDENT_LIBS = {
                 'commands': [
                     'perl Configure --openssldir=%(destdir)s VC-WIN32 no-asm',
                     'ms\\do_ms.bat',
-                    'nmake /f ms\\nt.mak install'],
+                    'mkdir inc32\openssl', # hack for building with jom
+                    '%(jom)s /J %(cores)i /f ms\\nt.mak install'],
             },
             'msvc*-win64*': {
                 'result': ['include/openssl/ssl.h', 'lib/ssleay32.lib', 'lib/libeay32.lib'],
@@ -269,13 +270,14 @@ DEPENDENT_LIBS = {
                 'commands': [
                     'perl Configure --openssldir=%(destdir)s VC-WIN64A',
                     'ms\\do_win64a.bat',
-                    'nmake /f ms\\nt.mak install']
+                    'mkdir inc32\openssl', # hack for building with jom
+                    '%(jom)s /J %(cores)i /f ms\\nt.mak install']
             },
             'mingw-w64-cross-win*': {
                 'result': ['include/openssl/ssl.h', 'lib/libssl.a', 'lib/libcrypto.a'],
                 'commands': [
                     'perl Configure --openssldir=%(destdir)s --cross-compile-prefix=%(mingw_w64)s- no-shared no-asm mingw64',
-                    'make',
+                    'make -j %(cores)i',
                     'make install_sw']
             }
         }
@@ -293,7 +295,7 @@ DEPENDENT_LIBS = {
                     'lib/zdll.lib'   : 'zlib.lib'
                 },
                 'replace':  [('win32/Makefile.msc', '-MD', '%(cflags)s')],
-                'commands': ['nmake /f win32/Makefile.msc zlib.lib']
+                'commands': ['%(jom)s /J %(cores)i /f win32/Makefile.msc zlib.lib']
             },
             'mingw-w64-cross-win*': {
                 'result': {
@@ -302,7 +304,7 @@ DEPENDENT_LIBS = {
                     'lib/libz.a'     : 'libz.a'
                 },
                 'replace':  [('win32/Makefile.gcc', 'PREFIX =', 'PREFIX = %(mingw_w64)s-')],
-                'commands': ['make -f win32/Makefile.gcc']
+                'commands': ['make -j %(cores)i -f win32/Makefile.gcc']
             }
         }
     },
@@ -322,7 +324,7 @@ DEPENDENT_LIBS = {
                     ('scripts/makefile.vcwin32', '-I..\\zlib', '-I..\\deplibs\\include'),
                     ('scripts/makefile.vcwin32', '..\\zlib\\zlib.lib', '..\\deplibs\\lib\\zdll.lib'),
                     ('scripts/makefile.vcwin32', '-MD', '%(cflags)s')],
-                'commands': ['nmake /f scripts/makefile.vcwin32 libpng.lib']
+                'commands': ['%(jom)s /J %(cores)i /f scripts/makefile.vcwin32 libpng.lib']
             },
             'mingw-w64-cross-win*': {
                 'result': {
@@ -336,25 +338,25 @@ DEPENDENT_LIBS = {
                     ('scripts/makefile.gcc', 'CC = gcc', 'CC = %(mingw_w64)s-gcc'),
                     ('scripts/makefile.gcc', 'AR_RC = ar', 'AR_RC = %(mingw_w64)s-ar'),
                     ('scripts/makefile.gcc', 'RANLIB = ranlib', 'RANLIB = %(mingw_w64)s-ranlib')],
-                'commands': ['make -f scripts/makefile.gcc libpng.a']
+                'commands': ['make -j %(cores)i -f scripts/makefile.gcc libpng.a']
             },
             'osx-carbon-i386': {
                 'result': ['include/png.h', 'include/pngconf.h', 'lib/libpng.a'],
                 'commands': [
                     'CFLAGS="-arch i386" ./configure --disable-shared --prefix=%(destdir)s',
-                    'make install']
+                    'make -j %(cores)i install']
             },
             'osx-cocoa-x86-64': {
                 'result': ['include/png.h', 'include/pngconf.h', 'lib/libpng.a'],
                 'commands': [
                     'CFLAGS="-arch x86_64" ./configure --disable-shared --prefix=%(destdir)s',
-                    'make install']
+                    'make -j %(cores)i install']
             },
             'linux-generic-*': {
                 'result': ['include/png.h', 'include/pngconf.h', 'lib/libpng.a'],
                 'commands': [
                     'CFLAGS="-fPIC" ./configure --disable-shared --enable-static --prefix=%(destdir)s',
-                    'make install']
+                    'make -j %(cores)i install']
             }
         }
     },
@@ -377,31 +379,31 @@ DEPENDENT_LIBS = {
                              ('makefile.vc', '$(cflags) $(cdebug) $(cvars)', '-c -nologo -D_CRT_SECURE_NO_DEPRECATE %(cflags)s -O2 -W3')],
                 'commands': [
                     'copy /y jconfig.vc jconfig.h',
-                    'nmake /f makefile.vc libjpeg.lib']
+                    '%(jom)s /J %(cores)i /f makefile.vc libjpeg.lib']
             },
             'mingw-w64-cross-win*': {
                 'result': ['include/jpeglib.h', 'include/jmorecfg.h', 'include/jerror.h', 'include/jconfig.h', 'lib/libjpeg.a'],
                 'commands': [
                     './configure --host=%(mingw_w64)s --disable-shared --prefix=%(destdir)s',
-                    'make install']
+                    'make -j %(cores)i install']
             },
             'osx-carbon-i386': {
                 'result': ['include/jpeglib.h', 'include/jmorecfg.h', 'include/jerror.h', 'include/jconfig.h', 'lib/libjpeg.a'],
                 'commands': [
                     'CFLAGS="-arch i386" ./configure --disable-shared --prefix=%(destdir)s',
-                    'make install']
+                    'make -j %(cores)i install']
             },
             'osx-cocoa-x86-64': {
                 'result': ['include/jpeglib.h', 'include/jmorecfg.h', 'include/jerror.h', 'include/jconfig.h', 'lib/libjpeg.a'],
                 'commands': [
                     'CFLAGS="-arch x86_64" ./configure --disable-shared --prefix=%(destdir)s',
-                    'make install']
+                    'make -j %(cores)i install']
             },
             'linux-generic-*': {
                 'result': ['include/jpeglib.h', 'include/jmorecfg.h', 'include/jerror.h', 'include/jconfig.h', 'lib/libjpeg.a'],
                 'commands': [
                     'CFLAGS="-fPIC" ./configure --disable-shared --enable-static --prefix=%(destdir)s',
-                    'make install']
+                    'make -j %(cores)i install']
             }
         }
     },
@@ -415,7 +417,9 @@ DEPENDENT_LIBS = {
                 'result': ['bin/xz'],
                 'commands': [
                     'CFLAGS="-arch i386 -mmacosx-version-min=10.6" ./configure --disable-nls --enable-small --disable-shared --disable-threads --prefix=%(destdir)s',
-                    'make -C src/liblzma', 'make -C src/xz', 'make install-strip']
+                    'make -j %(cores)i -C src/liblzma',
+                    'make -j %(cores)i -C src/xz',
+                    'make -j %(cores)i install-strip']
             }
         }
     },
@@ -428,8 +432,9 @@ DEPENDENT_LIBS = {
             'msvc*': {
                 'result': ['include/unicode/ucnv.h', 'include/unicode/ustring.h', ('lib/sicuin.lib', 'lib/sicuind.lib'), ('lib/sicudt.lib', 'lib/sicudtd.lib')],
                 'commands': [
+                    'SET "CFLAGS=%(cflags)s" && SET "CXXFLAGS=%(cflags)s" && '+
                     'bash source/runConfigureICU %(icu_dbg)s Cygwin/MSVC --enable-static --disable-shared --disable-tests --disable-samples --prefix=%(cygdest)s',
-                    'make',
+                    'make -j %(cores)i',
                     # For some strange reason make install fails with:
                     #   /usr/bin/install: cannot create regular file '<path>/WKHTML~1/STATIC~1/MSVC20~2/deplibs/lib/sicudtd.lib': No such file or directory
                     # - however running it in a login shell seems to make the problem go away
@@ -442,13 +447,13 @@ DEPENDENT_LIBS = {
                     'cp -R source source.host',
                     'cd source.host; ./configure; make',
                     'source/configure --host=%(mingw_w64)s --enable-release --disable-debug --enable-static --disable-shared --disable-tests --disable-samples --prefix=%(destdir)s --with-cross-build=`pwd`/source.host',
-                    'make install']
+                    'make -j %(cores)i install']
             },
             'linux-generic-*': {
                 'result': ['include/unicode/ucnv.h', 'include/unicode/ustring.h', 'lib/libicui18n.a', 'lib/libicuuc.a', 'lib/libicudata.a'],
                 'commands': [
                     'CFLAGS="-fPIC" CXXFLAGS="-fPIC" source/configure --enable-release --disable-debug --enable-static --disable-shared --disable-tests --disable-samples --disable-dyload --prefix=%(destdir)s',
-                    'make install']
+                    'make -j %(cores)i install']
             }
         }
     }
@@ -483,6 +488,10 @@ EXCLUDE_SRC_TARBALL = [
     'qt/qtwebkit/Tools/WebKitTestRunner*'
 ]
 
+JOM_DISTRIBUTION = {
+        'url' : 'http://download.qt.io/official_releases/jom/jom_1_1_1.zip',
+        'sha1': '9227d6c66c396d442d0a4abc57ffae2d3d729914'}
+
 # --------------------------------------------------------------- HELPERS
 
 import os, sys, platform, subprocess, shutil, re, fnmatch, multiprocessing, urllib, hashlib, tarfile
@@ -490,13 +499,24 @@ import os, sys, platform, subprocess, shutil, re, fnmatch, multiprocessing, urll
 from os.path import exists
 
 if platform.system() == 'Windows':
+    import zipfile
     try:
         import winreg
     except ImportError:
         import _winreg as winreg
-    CPU_COUNT = max(2, multiprocessing.cpu_count()-1)   # leave one CPU free
+
+CPU_COUNT = None
+parallel = os.environ.get('WKHTMLTOX_PARALLEL')
+if parallel:
+    try:
+        CPU_COUNT = int(parallel)
+    except:
+        pass
+    if not CPU_COUNT or CPU_COUNT < 1:
+        print "Invalid value for WKHTMLTOX_PARALLEL: {0}".format(parallel)
 else:
     CPU_COUNT = max(2, multiprocessing.cpu_count())
+del parallel
 
 def rchop(s, e):
     if s.endswith(e):
@@ -665,6 +685,14 @@ def download_tarball(url, sha1, dir, name):
     rmdir(tgt)
     os.rename(src, tgt)
     return tgt
+    
+def download_zipfile(url, sha1, dir, name):
+    loc = download_file(url, sha1, dir)
+    zip = zipfile.ZipFile(loc)
+    tgt = os.path.join(dir, name)
+    rmdir(tgt)
+    zip.extractall(tgt)
+    return tgt
 
 def _is_compiled(dst, loc):
     present = True
@@ -679,7 +707,7 @@ def build_deplibs(config, basedir, **kwargs):
     mkdir_p(os.path.join(basedir, config))
 
     dstdir = os.path.join(basedir, config, 'deplibs')
-    vars   = {'destdir': dstdir }
+    vars   = {'destdir': dstdir, 'cores': CPU_COUNT}
     vars.update(kwargs)
     for lib in sorted(DEPENDENT_LIBS, key=lambda x: DEPENDENT_LIBS[x]['order']):
         cfg = None
@@ -999,7 +1027,16 @@ def build_msvc(config, basedir):
     if ruby_bin_dir:
         path = r'%s;%s' % (path, ruby_bin_dir)
     os.environ['PATH'] = r'%s;%s\bin' % (path, cygwin)
-    build_deplibs(config, basedir, cygwin=cygwin, cygdest=cygdest, cflags=cflags, icu_dbg=icu_dbg)
+    
+    jomdir = download_zipfile(JOM_DISTRIBUTION['url'], JOM_DISTRIBUTION['sha1'],
+                                  basedir, os.path.join(config, 'jom'))
+    jom = os.path.join(jomdir, 'jom.exe')
+    
+    if CPU_COUNT > 1:
+        cflags += ' /FS'
+    
+    build_deplibs(config, basedir, cygwin=cygwin, cygdest=cygdest, cflags=cflags, icu_dbg=icu_dbg,
+        jom=jom)
 
     os.environ['PATH'] = r'%s;%s\..\qt\gnuwin32\bin' % (path, basedir)
     os.environ['SQLITE3SRCDIR'] = r'%s\..\qt\qtbase\src\3rdparty\sqlite' % basedir
@@ -1013,14 +1050,16 @@ def build_msvc(config, basedir):
         '-I %s\\include' % libdir,
         '-L %s\\lib' % libdir,
         'OPENSSL_LIBS="-L%s\\\\lib -lssleay32 -llibeay32 -lUser32 -lAdvapi32 -lGdi32 -lCrypt32"' % libdir.replace('\\', '\\\\'))
-
-    build_qtmodule(qtdir, 'qtbase', 'nmake',
+    
+    jom_builder = '"{0}" /J {1}'.format(jom, CPU_COUNT)
+        
+    build_qtmodule(qtdir, 'qtbase', jom_builder,
         r'%s\..\qt\qtbase\configure.bat %s' % (basedir, configure_args))
-    build_qtmodule(qtdir, 'qtsvg',  'nmake',
+    build_qtmodule(qtdir, 'qtsvg',  jom_builder,
         r'%s\qtbase\bin\qmake.exe %s\..\qt\qtsvg\qtsvg.pro' % (qtdir, basedir))
-    build_qtmodule(qtdir, 'qtxmlpatterns', 'nmake',
+    build_qtmodule(qtdir, 'qtxmlpatterns', jom_builder,
         r'%s\qtbase\bin\qmake.exe %s\..\qt\qtxmlpatterns\qtxmlpatterns.pro' % (qtdir, basedir))
-    build_qtmodule(qtdir, 'qtwebkit', 'nmake',
+    build_qtmodule(qtdir, 'qtwebkit', jom_builder,
         r'%s\qtbase\bin\qmake.exe %s\..\qt\qtwebkit\WebKit.pro WEBKIT_CONFIG-=build_webkit2' % (qtdir, basedir))
 
     appdir = os.path.join(basedir, config, 'app')
@@ -1032,7 +1071,7 @@ def build_msvc(config, basedir):
     os.environ['WKHTMLTOX_VERSION'] = version
 
     shell('%s\\qtbase\\bin\\qmake %s\\..\\wkhtmltopdf.pro' % (qtdir, basedir))
-    shell('nmake')
+    shell(jom_builder)
 
     makensis = os.path.join(get_registry_value(r'SOFTWARE\NSIS'), 'makensis.exe')
     os.chdir(os.path.join(basedir, '..'))
