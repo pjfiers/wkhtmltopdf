@@ -252,8 +252,8 @@ enabled=1
 DEPENDENT_LIBS = {
     'openssl': {
         'order' : 1,
-        'url'   : 'https://openssl.org/source/openssl-1.0.2d.tar.gz',
-        'sha1'  : 'd01d17b44663e8ffa6a33a5a30053779d9593c3d',
+        'url'   : 'https://openssl.org/source/openssl-1.0.2h.tar.gz',
+        'sha1'  : '577585f5f5d299c44dd3c993d3c0ac7a219e4949',
         'build' : {
             'msvc*-win32*': {
                 'result': ['include/openssl/ssl.h', 'lib/ssleay32.lib', 'lib/libeay32.lib'],
@@ -997,6 +997,9 @@ def check_msvc(config):
 
 def build_msvc(config, basedir):
     msvc, arch = rchop(config, '-dbg').split('-')
+    generate_vcprojs = True
+    make_nsis = False
+    
     vcdir = os.path.join(os.environ[MSVC_LOCATION[msvc]], '..', '..', 'VC')
     vcarg = 'x86'
     if arch == 'win64':
@@ -1052,16 +1055,53 @@ def build_msvc(config, basedir):
         'OPENSSL_LIBS="-L%s\\\\lib -lssleay32 -llibeay32 -lUser32 -lAdvapi32 -lGdi32 -lCrypt32"' % libdir.replace('\\', '\\\\'))
     
     jom_builder = '"{0}" /J {1}'.format(jom, CPU_COUNT)
+    qmake = qtdir + r'\qtbase\bin\qmake.exe'
+    os.environ['QMAKESPEC'] = 'win32-' + msvc
+    
+    qtmodules = [
+        {
+            'name': 'qtbase',
+            'configure_cmd': r'%s\..\qt\qtbase\configure.bat %s' % (basedir, configure_args)
+        },
+        {
+            'name': 'qtsvg'
+        },
+        {
+            'name': 'qtxmlpatterns'
+        },
+        {
+           'name': 'qtwebkit',
+           'pro_file':  'WebKit.pro',
+           'extra_options': 'WEBKIT_CONFIG-=build_webkit2'
+        }
+    ]
+    
+    vcproj_gen_cmds = []
+    
+    for mod_opts in qtmodules:
+        mod = mod_opts['name']
+        try:
+            pro_file = mod_opts['pro_file']
+        except KeyError:
+            pro_file = mod + '.pro'
+        try:
+            extra_options = mod_opts['extra_options']
+        except KeyError:
+            extra_options = ''
+        try:
+            configure_cmd = mod_opts['configure_cmd']
+        except KeyError:
+            configure_cmd = r'%s %s\..\qt\%s\%s %s' % (qmake, basedir, mod, pro_file, extra_options)
+        qmake_vcproj_cmd = r'%s -r -tp vc %s\..\qt\%s\%s %s' % (qmake, basedir, mod, pro_file, extra_options)
+        build_qtmodule(qtdir, mod, jom_builder, configure_cmd)
+        sln_file = os.path.splitext(pro_file)[0]+'.sln'
+        if generate_vcprojs and not exists(sln_file):
+            vcproj_gen_cmds.append((os.path.join(qtdir, mod), qmake_vcproj_cmd))
+    for (path, cmd) in vcproj_gen_cmds:
+       os.chdir(path)
+       print cmd
+       os.system(cmd)
         
-    build_qtmodule(qtdir, 'qtbase', jom_builder,
-        r'%s\..\qt\qtbase\configure.bat %s' % (basedir, configure_args))
-    build_qtmodule(qtdir, 'qtsvg',  jom_builder,
-        r'%s\qtbase\bin\qmake.exe %s\..\qt\qtsvg\qtsvg.pro' % (qtdir, basedir))
-    build_qtmodule(qtdir, 'qtxmlpatterns', jom_builder,
-        r'%s\qtbase\bin\qmake.exe %s\..\qt\qtxmlpatterns\qtxmlpatterns.pro' % (qtdir, basedir))
-    build_qtmodule(qtdir, 'qtwebkit', jom_builder,
-        r'%s\qtbase\bin\qmake.exe %s\..\qt\qtwebkit\WebKit.pro WEBKIT_CONFIG-=build_webkit2' % (qtdir, basedir))
-
     appdir = os.path.join(basedir, config, 'app')
     mkdir_p(appdir)
     os.chdir(appdir)
@@ -1070,13 +1110,16 @@ def build_msvc(config, basedir):
 
     os.environ['WKHTMLTOX_VERSION'] = version
 
-    shell('%s\\qtbase\\bin\\qmake %s\\..\\wkhtmltopdf.pro' % (qtdir, basedir))
+    shell('%s %s\\..\\wkhtmltopdf.pro' % (qmake, basedir))
     shell(jom_builder)
+    if generate_vcprojs:
+        shell('%s -r -tp vc %s\\..\\wkhtmltopdf.pro' % (qmake, basedir))
 
-    makensis = os.path.join(get_registry_value(r'SOFTWARE\NSIS'), 'makensis.exe')
-    os.chdir(os.path.join(basedir, '..'))
-    shell('"%s" /DVERSION=%s /DSIMPLE_VERSION=%s /DTARGET=%s /DMSVC /DARCH=%s wkhtmltox.nsi' % \
-            (makensis, version, nsis_version(simple_version), config, arch))
+    if make_nsis:
+        makensis = os.path.join(get_registry_value(r'SOFTWARE\NSIS'), 'makensis.exe')
+        os.chdir(os.path.join(basedir, '..'))
+        shell('"%s" /DVERSION=%s /DSIMPLE_VERSION=%s /DTARGET=%s /DMSVC /DARCH=%s wkhtmltox.nsi' % \
+                (makensis, version, nsis_version(simple_version), config, arch))
 
 # ------------------------------------------------ MinGW-W64 Cross Environment
 
