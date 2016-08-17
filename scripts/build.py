@@ -64,6 +64,7 @@ QT_CONFIG = {
         '-opensource',
         '-confirm-license',
         '-release',
+        '-force-debug-info',
         '-static',
         '-system-zlib',
         '-system-libpng',
@@ -256,21 +257,27 @@ DEPENDENT_LIBS = {
         'sha1'  : '577585f5f5d299c44dd3c993d3c0ac7a219e4949',
         'build' : {
             'msvc*-win32*': {
-                'result': ['include/openssl/ssl.h', 'lib/ssleay32.lib', 'lib/libeay32.lib'],
-                'replace': [('util/pl/VC-32.pl', ' /MT', ' %(cflags)s')],
+                'result': ['include/openssl/ssl.h', 'lib/ssleay32.lib', 'lib/libeay32.lib', 'lib/libeay32.pdb'],
+                'replace': [
+                    ('util/pl/VC-32.pl', ' /MT', ' %(cflags)s'),
+                    ('util/pl/VC-32.pl', ' /Fd\$(TMP_D)/lib', ' /Fd%(destdir)s/lib/libeay32.pdb')
+                ],
                 'commands': [
                     'perl Configure --openssldir=%(destdir)s VC-WIN32 no-asm',
                     'ms\\do_ms.bat',
-                    'mkdir inc32\openssl', # hack for building with jom
+                    r'mkdir inc32\openssl', # hack for building with jom
                     '%(jom)s /J %(cores)i /f ms\\nt.mak install'],
             },
             'msvc*-win64*': {
-                'result': ['include/openssl/ssl.h', 'lib/ssleay32.lib', 'lib/libeay32.lib'],
-                'replace': [('util/pl/VC-32.pl', ' /MT', ' %(cflags)s')],
+                'result': ['include/openssl/ssl.h', 'lib/ssleay32.lib', 'lib/libeay32.lib', 'lib/libeay32.pdb'],
+                'replace': [
+                    ('util/pl/VC-32.pl', ' /MT', ' %(cflags)s'),
+                    ('util/pl/VC-32.pl', ' /Fd\$(TMP_D)/lib', ' /Fd%(destdir)s/lib/libeay32.pdb')
+                ],
                 'commands': [
                     'perl Configure --openssldir=%(destdir)s VC-WIN64A',
                     'ms\\do_win64a.bat',
-                    'mkdir inc32\openssl', # hack for building with jom
+                    r'mkdir inc32\openssl', # hack for building with jom
                     '%(jom)s /J %(cores)i /f ms\\nt.mak install']
             },
             'mingw-w64-cross-win*': {
@@ -292,9 +299,13 @@ DEPENDENT_LIBS = {
                 'result': {
                     'include/zlib.h' : 'zlib.h',
                     'include/zconf.h': 'zconf.h',
-                    'lib/zdll.lib'   : 'zlib.lib'
+                    'lib/zdll.lib'   : 'zlib.lib',
+                    'lib/zdll.pdb'   : 'zdll.pdb'
                 },
-                'replace':  [('win32/Makefile.msc', '-MD', '%(cflags)s')],
+                'replace':  [
+                    ('win32/Makefile.msc', '-MD', '%(cflags)s'),
+                    ('win32/Makefile.msc', '-Fd"zlib"', '/Fdzdll.pdb'),
+                ],
                 'commands': ['%(jom)s /J %(cores)i /f win32/Makefile.msc zlib.lib']
             },
             'mingw-w64-cross-win*': {
@@ -318,12 +329,13 @@ DEPENDENT_LIBS = {
                 'result': {
                     'include/png.h'       : 'png.h',
                     'include/pngconf.h'   : 'pngconf.h',
-                    'lib/libpng.lib'      : 'libpng.lib'
+                    'lib/libpng.lib'      : 'libpng.lib',
+                    'lib/libpng.pdb'      : 'libpng.pdb'
                 },
                 'replace': [
                     ('scripts/makefile.vcwin32', '-I..\\zlib', '-I..\\deplibs\\include'),
                     ('scripts/makefile.vcwin32', '..\\zlib\\zlib.lib', '..\\deplibs\\lib\\zdll.lib'),
-                    ('scripts/makefile.vcwin32', '-MD', '%(cflags)s')],
+                    ('scripts/makefile.vcwin32', '-MD', '%(cflags)s /Fdlibpng.pdb')],
                 'commands': ['%(jom)s /J %(cores)i /f scripts/makefile.vcwin32 libpng.lib']
             },
             'mingw-w64-cross-win*': {
@@ -372,11 +384,12 @@ DEPENDENT_LIBS = {
                     'include/jmorecfg.h': 'jmorecfg.h',
                     'include/jerror.h'  : 'jerror.h',
                     'include/jconfig.h' : 'jconfig.h',
-                    'lib/libjpeg.lib'   : 'libjpeg.lib'
+                    'lib/libjpeg.lib'   : 'libjpeg.lib',
+                    'lib/libjpeg.pdb'   : 'libjpeg.pdb'
                 },
                 'replace':  [('makefile.vc', '!include <win32.mak>', ''),
                              ('makefile.vc', '$(cc)', 'cl'),
-                             ('makefile.vc', '$(cflags) $(cdebug) $(cvars)', '-c -nologo -D_CRT_SECURE_NO_DEPRECATE %(cflags)s -O2 -W3')],
+                             ('makefile.vc', '$(cflags) $(cdebug) $(cvars)', '-c -nologo -D_CRT_SECURE_NO_DEPRECATE %(cflags)s -O2 -W3 /Fdlibjpeg.pdb')],
                 'commands': [
                     'copy /y jconfig.vc jconfig.h',
                     '%(jom)s /J %(cores)i /f makefile.vc libjpeg.lib']
@@ -430,10 +443,13 @@ DEPENDENT_LIBS = {
         'sha1': 'ca5f5cc584f45e87bf56bf8b7f9244d12a5ada67',
         'build' : {
             'msvc*': {
-                'result': ['include/unicode/ucnv.h', 'include/unicode/ustring.h', ('lib/sicuin.lib', 'lib/sicuind.lib'), ('lib/sicudt.lib', 'lib/sicudtd.lib')],
+                'result': [
+                    'include/unicode/ucnv.h', 'include/unicode/ustring.h', ('lib/sicuin.lib', 'lib/sicuind.lib'), ('lib/sicudt.lib', 'lib/sicudtd.lib'),
+                    ('lib/sicuin.pdb', 'lib/icu4c.pdb')],
                 'commands': [
-                    'SET "CFLAGS=%(cflags)s" && SET "CXXFLAGS=%(cflags)s" && '+
+                    'SET "CFLAGS=%(cflags)s /Fd%(destdir)s/lib/icu4c.pdb" && SET "CXXFLAGS=%(cflags)s /Fd%(destdir)s/lib/icu4c.pdb" && '+
                     'bash source/runConfigureICU %(icu_dbg)s Cygwin/MSVC --enable-static --disable-shared --disable-tests --disable-samples --prefix=%(cygdest)s',
+                    'del "%(destdir_bs)s\lib\icu4c.pdb"',
                     'make -j %(cores)i',
                     # For some strange reason make install fails with:
                     #   /usr/bin/install: cannot create regular file '<path>/WKHTML~1/STATIC~1/MSVC20~2/deplibs/lib/sicudtd.lib': No such file or directory
@@ -707,7 +723,10 @@ def build_deplibs(config, basedir, **kwargs):
     mkdir_p(os.path.join(basedir, config))
 
     dstdir = os.path.join(basedir, config, 'deplibs')
-    vars   = {'destdir': dstdir, 'cores': CPU_COUNT}
+    mkdir_p(os.path.join(dstdir, 'lib'))
+    if sys.platform == 'win32':
+        dstdir = dstdir.replace('\\', '/')
+    vars   = {'destdir': dstdir, 'destdir_bs': dstdir.replace('/', '\\'), 'cores': CPU_COUNT}
     vars.update(kwargs)
     for lib in sorted(DEPENDENT_LIBS, key=lambda x: DEPENDENT_LIBS[x]['order']):
         cfg = None
@@ -1024,7 +1043,8 @@ def build_msvc(config, basedir):
 
     cygwin  = get_registry_value(r'SOFTWARE\Cygwin\setup', 'rootdir')
     cygdest = get_output(os.path.join(cygwin, 'bin', 'cygpath.exe'), '-ua', libdir)
-    cflags  = config.endswith('-dbg') and '/MDd /Zi' or '/MD'
+    cflags  = '/Zi'
+    cflags += config.endswith('-dbg') and ' /MDd' or ' /MD'
     icu_dbg = config.endswith('-dbg') and '--enable-debug --disable-release' or ''
     _, ruby_bin_dir = windows_find_ruby()
     if ruby_bin_dir:
@@ -1088,6 +1108,7 @@ def build_msvc(config, basedir):
             extra_options = mod_opts['extra_options']
         except KeyError:
             extra_options = ''
+        extra_options += ' CONFIG+=force-debug-info'
         try:
             configure_cmd = mod_opts['configure_cmd']
         except KeyError:
@@ -1110,10 +1131,10 @@ def build_msvc(config, basedir):
 
     os.environ['WKHTMLTOX_VERSION'] = version
 
-    shell('%s %s\\..\\wkhtmltopdf.pro' % (qmake, basedir))
+    shell('%s %s\\..\\wkhtmltopdf.pro CONFIG+=force-debug-info' % (qmake, basedir))
     shell(jom_builder)
     if generate_vcprojs:
-        shell('%s -r -tp vc %s\\..\\wkhtmltopdf.pro' % (qmake, basedir))
+        shell('%s -r -tp vc %s\\..\\wkhtmltopdf.pro CONFIG+=force-debug-info' % (qmake, basedir))
 
     if make_nsis:
         makensis = os.path.join(get_registry_value(r'SOFTWARE\NSIS'), 'makensis.exe')
