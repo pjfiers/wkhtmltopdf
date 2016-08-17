@@ -21,7 +21,7 @@ CONFIG += dll
 include(../../common.pri)
 include(lib.pri)
 
-DEF_FILE = lib.def
+DEF_FILE = $$_PRO_FILE_PWD_/lib.def
 CONFIG(static, shared|static): DEFINES += QT_NODLL
 
 unix {
