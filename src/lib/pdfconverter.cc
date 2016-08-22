@@ -31,6 +31,7 @@
 #include <QWebPage>
 #include <QWebSettings>
 #include <QXmlQuery>
+#include <QUrlQuery>
 #include <algorithm>
 #include <qapplication.h>
 #include <qfileinfo.h>
@@ -1056,8 +1057,11 @@ void PdfConverterPrivate::printDocument() {
 #ifdef __EXTENSIVE_WKHTMLTOPDF_QT_HACK__
 QWebPage * PdfConverterPrivate::loadHeaderFooter(QString url, const QHash<QString, QString> & parms, const settings::PdfObject & ps) {
 	QUrl u = MultiPageLoader::guessUrlFromString(url);
+	QUrlQuery uq(u);
 	for (QHash<QString, QString>::const_iterator i=parms.begin(); i != parms.end(); ++i)
-		u.addQueryItem(i.key(), i.value());
+		uq.addQueryItem(i.key(), i.value());
+
+	u.setQuery(uq);
 	return &hfLoader.addResource(u, ps.load)->page;
 
 }
