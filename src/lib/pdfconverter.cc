@@ -310,6 +310,7 @@ void PdfConverterPrivate::preprocessPage(PageObject & obj) {
 
 
 	QWebPrinter wp(obj.page->mainFrame(), printer, *painter);
+    wp.setNoReturnToScreenMode(true);
 	obj.pageCount = obj.settings.pagesCount? wp.pageCount(): 0;
 	pageCount += obj.pageCount;
 
